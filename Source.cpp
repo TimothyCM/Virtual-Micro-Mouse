@@ -1,9 +1,9 @@
 /*******************************************
 * Program Name: Virtual Micro Mouse
 * Created By: Timothy Mulvey
-* Purpose: Simulate a Micro Mouse maze and mouse to test algorithms without hardware.
+* Purpose: Simulate a Micro Mouse maze and mouse to test algorithms
 * Version: 0.1
-* Date: 12/26/2017
+* Date: 12/27/2017
 *******************************************/
 
 #include <cstdlib> 
@@ -173,12 +173,15 @@ public:
 };
 
 /*******************************************
-* Class Name: Move
+* Class Name: Fringe
 * Purpose: Represents the fringe of the explored area. (List of possible moves)
 *******************************************/
 class Fringe {
 	deque<Move> moves;
+	bool showOutput;
 public:
+	Fringe() : showOutput(true) {};
+	Fringe(bool show) : showOutput(show) {};
 	bool empty() {
 		return moves.empty();
 	}
@@ -186,12 +189,14 @@ public:
 		return moves;
 	}
 	void add(deque<Move> que) {
-		if (!que.empty()) {
+		if (!que.empty() && showOutput) {
 			cout << "Adding moves:\n";
 		}
 		while (!que.empty()) {
 			moves.push_front(que.front());
-			que.front().draw();
+			if (showOutput) {
+				que.front().draw();
+			}
 			que.pop_front();
 		}
 	}
@@ -214,8 +219,10 @@ public:
 				}
 			}
 		}
-		cout << "Move selected:\n";
-		move.draw();
+		if (showOutput) {
+			cout << "Move selected:\n";
+			move.draw();
+		}
 		return move;
 	}
 	Move getBig() {
@@ -234,8 +241,10 @@ public:
 				}
 			}
 		}
-		cout << "Move selected:\n";
-		move.draw();
+		if (showOutput) {
+			cout << "Move selected:\n";
+			move.draw();
+		}
 		return move;
 	}
 	void draw() {
@@ -560,7 +569,12 @@ int main() {
 	return 0;
 }
 
-//See class for info.
+/*******************************************
+* Fuction Name: MoveSimple()
+* Parameters: None
+* Return Value: None
+* Purpose: Used to move the mouse when there is only one path.
+*******************************************/
 void Mouse::moveSimple() {
 	if (dir == 'n') {
 		if (curCell.top == false)
@@ -612,6 +626,12 @@ void Mouse::moveSimple() {
 	}
 }
 
+/*******************************************
+* Fuction Name: Maze()
+* Parameters: Bool
+* Return Value: None
+* Purpose: Constructor that makes an empty maze. Used for mouse memory.
+*******************************************/
 Maze::Maze(bool empty) {
 	maze[0][0].mSet(true);
 	for (int i = 0; i < 16; i++) {
@@ -621,21 +641,13 @@ Maze::Maze(bool empty) {
 	}
 }
 
+/*******************************************
+* Fuction Name: Maze()
+* Parameters: None
+* Return Value: None
+* Purpose: Constructor that makes a randomly generated maze.
+*******************************************/
 Maze::Maze() {
-	/*maze[0][0].set(true, true, false, false);	//set top left corner
-	maze[15][0].set(true, false, true, false);  //set top right corner
-	maze[0][15].set(false, true, false, true);	//set bottom left corner
-	maze[15][15].set(false, false, true, true);	//set bottom right corner
-	for (int i = 1; i < 15; i++) {
-		//set wall along the top edge of the maze
-		maze[i][0].set(true, false, false, false);
-		//set wall along the bottom edge of the maze
-		maze[i][15].set(false, false, false, true);
-		//set wall along the left edge of the maze
-		maze[0][i].set(false, true, false, false);
-		//set wall along the right edge of the maze
-		maze[15][i].set(false, false, true, false);
-	}*/
 	//Seed rand() for random numbers
 	srand((unsigned)time(0));
 	//turn on all walls
@@ -657,12 +669,11 @@ Maze::Maze() {
 	//create x and y to track location in maze
 	int x = 0; int y = 0;
 	//Create fringe
-	Fringe fringe;
+	Fringe fringe = false;
 	//loop until center of the maze is reached
 	while (!((x == 7 || x == 8) && (y == 7 || y == 8))) {
-		cout << "Current locationg: x = " << dec << x << " y = " << y << "\n";
 		maze[x][y].explored = true;
-		Fringe tempFringe;
+		Fringe tempFringe = false;
 		if (x > 0 && !maze[x-1][y].explored) {
 			Move move;
 			move.set('w', x, y, maze[x-1][y].dist, 0, x - 1, y);
@@ -695,7 +706,7 @@ Maze::Maze() {
 				}
 			}
 		}
-		else if (rando < 8 && rando > 5) {
+		else if (rando == 7) {
 			for (int i = 0; i < 2; i++) {
 				if (!tempFringe.empty()) {
 					fringe.add(tempFringe.getBig());
@@ -719,7 +730,6 @@ Maze::Maze() {
 		}
 		Move move = fringe.getBig();
 		if (move.dir == 'n') {
-			cout << "moving north\n";
 			maze[move.sourceX][move.sourceY].top = false;
 			maze[move.destX][move.destY].bottom = false;
 		}
@@ -737,23 +747,15 @@ Maze::Maze() {
 		}
 		
 		x = move.destX; y = move.destY;
-		//break;
-		//char cont;
-		//draw();
-		//fringe.draw();
-		//cout << "Cont? (Y / N) : ";
-		//cin >> cont;
-		//system("cls");
 	}
-	char cont;
-	system("cls");
-	cout << "Setup Done\n";
-	draw();
-	cout << "Cont? (Y / N) : ";
-	cin >> cont;
-	system("cls");
 }
 
+/*******************************************
+* Fuction Name: Maze()
+* Parameters: None
+* Return Value: None
+* Purpose: Constructor that makes a preset maze. (old)
+*******************************************/
 /*
 Maze::Maze() {
 	maze[0][0].mSet(true);
