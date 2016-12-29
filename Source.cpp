@@ -1,9 +1,9 @@
 /*******************************************
 * Program Name: Virtual Micro Mouse
 * Created By: Timothy Mulvey
-* Purpose: Simulate a Micro Mouse maze and mouse to test algorithms
-* Version: 0.1
-* Date: 12/27/2017
+* Purpose: Simulate a MicroMouse maze and mouse to test algorithms
+* Version: 0.11
+* Date: 12/28/2017
 *******************************************/
 
 #include <cstdlib> 
@@ -13,43 +13,103 @@
 using namespace std;
 
 /*******************************************
+* Class Name: Edge
+* Purpose: Represent a connection between Cells
+*******************************************/
+class Edge {
+	int sourceX, sourceY;
+	int destX, destY;
+	int dist;
+	bool wall, mazeEdge;
+public:
+	void randSetup(int x, int y, char dir) {
+		sourceX = x; sourceY = y;
+		wall = true;
+		if (dir == 'n' || dir == 's') {
+			destX = x;
+			if ((y == 0 && dir == 'n') || (y == 15 && dir == 's')) {
+				destY = y;
+				dist = 0;
+				mazeEdge = true;
+			}
+			else {
+				dist = rand();
+				mazeEdge = false;
+				if (dir == 'n')
+				destY = y - 1;
+				else destY = y + 1;
+			}
+		}
+		else if (dir == 'e' || dir == 'w') {
+			destY = y;
+			if ((x == 0 && dir == 'w') || (x = 15 && dir == 'e')) {
+				destX = x;
+				dist = 0;
+				mazeEdge = true;
+			}
+			else {
+				dist = rand();
+				mazeEdge = false;
+				if (dir == 'w')
+					destX = x - 1;
+				else destX = x + 1;
+			}
+		}
+		else {
+			cout << "Error: Invalid direction in Edge.randSetup\n";
+			system("PAUSE");
+		}
+	}
+};
+
+/*******************************************
 * Class Name: Cell
 * Purpose: Represent a cell in a maze.
 *******************************************/
 class Cell {
-	int x;
-	int y;
+	int x, y;
+	Edge north, east, south, west;
 public:
 	int dist;
-	bool top;
-	bool left;
-	bool right;
-	bool bottom;
+	bool top, bottom;
+	bool left, right;
 	bool mouse;
 	bool explored;
-	Cell() {
-		top = 0; left = 0; right = 0; bottom = 0; mouse = false; explored = false;
+	//Constructor
+	Cell() : top(false), left(false), right(false), bottom(false), mouse(false), explored(false) {};
+
+	void randSetup(int xVal, int yVal) {
+		x = xVal; y = yVal;
+		north.randSetup(x, y, 'n');
+		dist = rand();
 	}
-	Cell(bool t, bool l, bool r, bool b) {
-		top = t; left = l; right = r; bottom = b; mouse = false; explored = false;
-	}
+
+	//Sets walls on cell
 	void set(bool t, bool l, bool r, bool b) {
 		top = t;
 		left = l;
 		right = r;
 		bottom = b;
 	}
+
+	//Sets if the mouse is in the cell or not
 	void mSet(bool m) {
 		mouse = m;
 	}
+
+	//Sets cell values from another cell
 	void set(Cell c) {
 		top = c.top; left = c.left; right = c.right; bottom = c.bottom; mouse = c.mouse;
 	}
+
+	//sets coordinates of cell in a maze
 	void setCord(int x1, int y1) {
 		x = x1;
 		y = y1;
-		dist = 0;
+		dist = 0;  //default to zero for maze drawing
 	}
+
+	//sets coordinates of cell and calculates distance to goal
 	void setCord(int x1, int y1, bool b) {
 		x = x1;
 		y = y1;
@@ -146,10 +206,8 @@ class Move {
 	int toGoal;
 public:
 	char dir;
-	int sourceX;
-	int sourceY;
-	int destX;
-	int destY;
+	int sourceX, sourceY;
+	int destX, destY;
 	int fromStart;
 
 	void set(char d, int x1, int y1, int g, int s, int x2, int y2) {
@@ -645,9 +703,118 @@ Maze::Maze(bool empty) {
 * Fuction Name: Maze()
 * Parameters: None
 * Return Value: None
-* Purpose: Constructor that makes a randomly generated maze.
+* Purpose: Constructor that makes a randomly generated maze. Version 1.0
 *******************************************/
 Maze::Maze() {
+	//Seed rand() for random numbers
+	srand((unsigned)time(0));
+	//turn on all walls
+	for (int x = 0; x < 16; x++) {
+		for (int y = 0; y < 16; y++) {
+			maze[x][y].set(true, true, true, true);
+			maze[x][y].dist = (rand() % 15) + 1;
+		}
+	}
+	//Take down center walls and set distance values to zero
+	maze[7][7].dist = 0;
+	maze[7][7].set(true, true, false, false);
+	maze[8][7].dist = 0;
+	maze[8][7].set(true, false, true, false);
+	maze[7][8].dist = 0;
+	maze[7][8].set(false, true, false, true);
+	maze[8][8].dist = 0;
+	maze[8][8].set(false, false, true, true);
+	//create x and y to track location in maze
+	int x = 0; int y = 0;
+	//Create fringe
+	Fringe fringe = false;
+	//loop until center of the maze is reached
+	while (!((x == 7 || x == 8) && (y == 7 || y == 8))) {
+		maze[x][y].explored = true;
+		Fringe tempFringe = false;
+		if (x > 0 && !maze[x - 1][y].explored) {
+			Move move;
+			move.set('w', x, y, maze[x - 1][y].dist, 0, x - 1, y);
+			tempFringe.add(move);
+		}
+		if (x < 15 && !maze[x + 1][y].explored) {
+			Move move;
+			move.set('e', x, y, maze[x + 1][y].dist, 0, x + 1, y);
+			tempFringe.add(move);
+		}
+		if (y > 0 && !maze[x][y - 1].explored) {
+			Move move;
+			move.set('n', x, y, maze[x][y - 1].dist, 0, x, y - 1);
+			tempFringe.add(move);
+		}
+		if (y < 15 && !maze[x][y + 1].explored) {
+			Move move;
+			move.set('s', x, y, maze[x][y + 1].dist, 0, x, y + 1);
+			tempFringe.add(move);
+		}
+
+		int rando = rand() % 10;
+		if (rando == 9) {
+			fringe.add(tempFringe.getAll());
+		}
+		else if (rando == 8) {
+			for (int i = 0; i < 3; i++) {
+				if (!tempFringe.empty()) {
+					fringe.add(tempFringe.getBig());
+				}
+			}
+		}
+		else if (rando == 7) {
+			for (int i = 0; i < 2; i++) {
+				if (!tempFringe.empty()) {
+					fringe.add(tempFringe.getBig());
+				}
+			}
+		}
+		else if (rando > 0) {
+			if (!tempFringe.empty()) {
+				fringe.add(tempFringe.getBig());
+			}
+		}
+		else {
+			if (fringe.empty()) {
+				if (!tempFringe.empty()) {
+					fringe.add(tempFringe.getBig());
+				}
+			}
+		}
+		while (!tempFringe.empty()) {
+			tempFringe.get();
+		}
+		Move move = fringe.getBig();
+		if (move.dir == 'n') {
+			maze[move.sourceX][move.sourceY].top = false;
+			maze[move.destX][move.destY].bottom = false;
+		}
+		else if (move.dir == 's') {
+			maze[move.sourceX][move.sourceY].bottom = false;
+			maze[move.destX][move.destY].top = false;
+		}
+		else if (move.dir == 'e') {
+			maze[move.sourceX][move.sourceY].right = false;
+			maze[move.destX][move.destY].left = false;
+		}
+		else if (move.dir == 'w') {
+			maze[move.sourceX][move.sourceY].left = false;
+			maze[move.destX][move.destY].right = false;
+		}
+
+		x = move.destX; y = move.destY;
+	}
+}
+
+/*******************************************
+* Fuction Name: Maze()
+* Parameters: None
+* Return Value: None
+* Purpose: Constructor that makes a randomly generated maze. Version 0.5
+*******************************************/
+/*Maze::Maze() {
 	//Seed rand() for random numbers
 	srand((unsigned)time(0));
 	//turn on all walls
@@ -748,282 +915,4 @@ Maze::Maze() {
 		
 		x = move.destX; y = move.destY;
 	}
-}
-
-/*******************************************
-* Fuction Name: Maze()
-* Parameters: None
-* Return Value: None
-* Purpose: Constructor that makes a preset maze. (old)
-*******************************************/
-/*
-Maze::Maze() {
-	maze[0][0].mSet(true);
-	maze[0][0].set(true, true, false, false);
-	for (int x = 1; x < 15; x++)
-		maze[x][0].set(true, false, false, true);
-	maze[3][0].set(true, false, false, false);
-	maze[15][0].set(true, false, true, false);
-
-	maze[0][1].set(false, 1, false, false);
-	maze[1][1].set(true, false, true, false);
-	maze[2][1].set(true, true, true, false);
-	maze[3][1].set(false, true, true, false);
-	maze[4][1].set(true, true, false, false);
-	maze[5][1].set(true, false, false, true);
-	maze[6][1].set(true, false, false, true);
-	maze[7][1].set(true, false, false, false);
-	maze[8][1].set(true, false, false, false);
-	maze[9][1].set(true, false, false, true);
-	maze[10][1].set(true, false, false, false);
-	maze[11][1].set(true, false, true, false);
-	maze[12][1].set(true, true, true, false);
-	maze[13][1].set(true, true, false, false);
-	maze[14][1].set(true, false, true, true);
-	maze[15][1].set(false, true, true, false);
-
-	maze[0][2].set(false, true, true, false);
-	maze[1][2].set(0, 1, 1, 1);
-	maze[2][2].set(0, 1, 1, 0);
-	maze[3][2].set(0, 1, 1, 0);
-	maze[4][2].set(0, 1, 1, 0);
-	maze[5][2].set(1, 1, 0, 0);
-	maze[6][2].set(1, 0, 0, 1);
-	maze[7][2].set(0, 0, 1, 1);
-	maze[8][2].set(0, 1, 1, false);
-	maze[9][2].set(true, 1, 1, false);
-	maze[10][2].set(0, 1, 1, false);
-	maze[11][2].set(0, 1, 1, false);
-	maze[12][2].set(true, false, false, false);
-	maze[13][2].set(0, false, 1, 1);
-	maze[14][2].set(true, 1, 1, false);
-	maze[15][2].set(0, 1, 1, false);
-
-	maze[0][3].set(0, 1, 0, 1);
-	maze[1][3].set(1, 0, 0, 0);
-	maze[2][3].set(0, 0, 1, 0);
-	maze[3][3].set(0, 1, 1, 0);
-	maze[4][3].set(0, 1, 1, 0);
-	maze[5][3].set(0, 1, 1, 1);
-	maze[6][3].set(1, 1, 0, 1);
-	maze[7][3].set(1, 0, 0, 0);
-	maze[8][3].set(0, 0, 1, 1);
-	maze[9][3].set(0, 1, 0, 1);
-	maze[10][3].set(0, 0, 1, 1);
-	maze[11][3].set(0, 1, 0, 1);
-	maze[12][3].set(0, 0, 1, 0);
-	maze[13][3].set(1, 1, 1, 0);
-	maze[14][3].set(0, 1, 1, 0);
-	maze[15][3].set(0, 1, 1, 0);
-
-	maze[0][4].set(1, 1, 0, 0);
-	maze[1][4].set(0, 0, 1, 1);
-	maze[2][4].set(0, 1, 0, 0);
-	maze[3][4].set(0, 0, 0, 1);
-	maze[4][4].set(0, 0, 1, 0);
-	maze[5][4].set(1, 1, 0, 0);
-	maze[6][4].set(1, 0, 0, 1);
-	maze[7][4].set(0, 0, 0, 1);
-	maze[8][4].set(1, 0, 0, 1);
-	maze[9][4].set(1, 0, 0, 0);
-	maze[10][4].set(1, 0, 0, 1);
-	maze[11][4].set(1, 0, 0, 1);
-	maze[12][4].set(0, 0, 0, 1);
-	maze[13][4].set(0, 0, 0, 1);
-	maze[14][4].set(0, 0, 0, 1);
-	maze[15][4].set(0, 0, 1, 1);
-
-	maze[0][5].set(0, 1, 0, 1);
-	maze[1][5].set(1, 0, 0, 0);
-	maze[2][5].set(0, 0, 1, 1);
-	maze[3][5].set(1, 1, 1, 0);
-	maze[4][5].set(0, 1, 1, 0);
-	maze[5][5].set(0, 1, 0, 0);
-	maze[6][5].set(1, 0, 0, 1);
-	maze[7][5].set(1, 0, 1, 0);
-	maze[8][5].set(1, 1, 1, 0);
-	maze[9][5].set(0, 1, 0, 0);
-	maze[10][5].set(1, 0, 0, 1);
-	maze[11][5].set(1, 0, 0, 0);
-	maze[12][5].set(1, 0, 1, 1);
-	maze[13][5].set(1, 1, 0, 0);
-	maze[14][5].set(1, 0, 0, 1);
-	maze[15][5].set(1, 0, 1, 0);
-
-	maze[0][6].set(1, 1, 0, 0);
-	maze[1][6].set(0, 0, 0, 1);
-	maze[2][6].set(1, 0, 1, 0);
-	maze[3][6].set(0, 1, 0, 1);
-	maze[4][6].set(0, 0, 1, 1);
-	maze[5][6].set(0, 1, 1, 0);
-	maze[6][6].set(1, 1, 0, 0);
-	maze[7][6].set(0, 0, 1, 0);
-	maze[8][6].set(0, 1, 0, 1);
-	maze[9][6].set(0, 0, 0, 0);
-	maze[10][6].set(1, 0, 1, 0);
-	maze[11][6].set(0, 1, 0, 1);
-	maze[12][6].set(1, 0, 0, 1);
-	maze[13][6].set(0, 0, 1, 1);
-	maze[14][6].set(1, 1, 1, 0);
-	maze[15][6].set(0, 1, 1, 1);
-
-	maze[0][7].set(0, 1, 0, 0);
-	maze[1][7].set(1, 0, 1, 0);
-	maze[2][7].set(0, 1, 0, 0);
-	maze[3][7].set(1, 0, 0, 1);
-	maze[4][7].set(1, 0, 1, 0);
-	maze[5][7].set(0, 1, 1, 1);
-	maze[6][7].set(0, 1, 1, 0);
-	maze[7][7].set(0, 1, 0, 0);
-	maze[8][7].set(1, 0, 1, 0);
-	maze[9][7].set(0, 1, 1, 0);
-	maze[10][7].set(0, 1, 0, 1);
-	maze[11][7].set(1, 0, 0, 1);
-	maze[12][7].set(1, 0, 0, 1);
-	maze[13][7].set(1, 0, 0, 0);
-	maze[14][7].set(0, 0, 0, 1);
-	maze[15][7].set(1, 0, 1, 0);
-
-	maze[0][8].set(0, 1, 1, 0);
-	maze[1][8].set(0, 1, 1, 0);
-	maze[2][8].set(0, 1, 1, 0);
-	maze[3][8].set(1, 1, 1, 0);
-	maze[4][8].set(0, 1, 0, 0);
-	maze[5][8].set(1, 0, 1, 0);
-	maze[6][8].set(0, 1, 1, 0);
-	maze[7][8].set(0, 1, 0, 1);
-	maze[8][8].set(0, 0, 1, 1);
-	maze[9][8].set(0, 1, 1, 0);
-	maze[10][8].set(1, 1, 0, 0);
-	maze[11][8].set(1, 0, 0, 0);
-	maze[12][8].set(1, 0, 1, 0);
-	maze[13][8].set(0, 1, 1, 1);
-	maze[14][8].set(1, 1, 0, 0);
-	maze[15][8].set(0, 0, 1, 0);
-
-	maze[0][9].set(0, 1, 1, 0);
-	maze[1][9].set(0, 1, 1, 0);
-	maze[2][9].set(0, 1, 0, 0);
-	maze[3][9].set(0, 0, 1, 0);
-	maze[4][9].set(0, 1, 1, 1);
-	maze[5][9].set(0, 1, 1, 1);
-	maze[6][9].set(0, 1, 0, 0);
-	maze[7][9].set(1, 0, 1, 1);
-	maze[8][9].set(1, 1, 0, 0);
-	maze[9][9].set(0, 0, 1, 0);
-	maze[10][9].set(0, 1, 1, 0);
-	maze[11][9].set(0, 1, 1, 1);
-	maze[12][9].set(0, 1, 0, 1);
-	maze[13][9].set(1, 0, 0, 1);
-	maze[14][9].set(0, 0, 1, 0);
-	maze[15][9].set(0, 1, 1, 1);
-
-	maze[0][10].set(0, 1, 1, 0);
-	maze[1][10].set(0, 1, 1, 0);
-	maze[2][10].set(0, 1, 1, 0);
-	maze[3][10].set(0, 1, 0, 0);
-	maze[4][10].set(1, 0, 0, 1);
-	maze[5][10].set(1, 0, 1, 0);
-	maze[6][10].set(0, 1, 0, 1);
-	maze[7][10].set(1, 0, 0, 0);
-	maze[8][10].set(0, 0, 1, 0);
-	maze[9][10].set(0, 1, 0, 0);
-	maze[10][10].set(0, 0, 1, 1);
-	maze[11][10].set(1, 1, 0, 0);
-	maze[12][10].set(1, 0, 1, 1);
-	maze[13][10].set(1, 1, 1, 0);
-	maze[14][10].set(0, 1, 0, 0);
-	maze[15][10].set(1, 0, 1, 0);
-
-	maze[0][11].set(0, 1, 1, 0);
-	maze[1][11].set(0, 1, 0, 0);
-	maze[2][11].set(0, 0, 0, 1);
-	maze[3][11].set(0, 0, 1, 0);
-	maze[4][11].set(1, 1, 1, 0);
-	maze[5][11].set(0, 1, 1, 1);
-	maze[6][11].set(1, 1, 1, 0);
-	maze[7][11].set(0, 1, 1, 1);
-	maze[8][11].set(0, 1, 0, 1);
-	maze[9][11].set(0, 0, 1, 1);
-	maze[10][11].set(1, 1, 0, 0);
-	maze[11][11].set(0, 0, 1, 1);
-	maze[12][11].set(1, 1, 0, 0);
-	maze[13][11].set(0, 0, 1, 0);
-	maze[14][11].set(0, 1, 1, 0);
-	maze[15][11].set(0, 1, 1, 1);
-
-	maze[0][12].set(0, 1, 1, 0);
-	maze[1][12].set(0, 1, 1, 1);
-	maze[2][12].set(1, 1, 1, 0);
-	maze[3][12].set(0, 1, 0, 1);
-	maze[4][12].set(0, 0, 0, 1);
-	maze[5][12].set(1, 0, 0, 0);
-	maze[6][12].set(0, 0, 0, 1);
-	maze[7][12].set(1, 0, 0, 0);
-	maze[8][12].set(1, 0, 1, 1);
-	maze[9][12].set(1, 1, 0, 1);
-	maze[10][12].set(0, 0, 0, 1);
-	maze[11][12].set(1, 0, 0, 0);
-	maze[12][12].set(0, 0, 1, 1);
-	maze[13][12].set(0, 1, 0, 0);
-	maze[14][12].set(0, 0, 1, 0);
-	maze[15][12].set(1, 1, 1, 0);
-
-	maze[0][13].set(0, 1, 1, 0);
-	maze[1][13].set(1, 1, 0, 0);
-	maze[2][13].set(0, 0, 0, 1);
-	maze[3][13].set(1, 0, 0, 1);
-	maze[4][13].set(1, 0, 0, 0);
-	maze[5][13].set(0, 0, 0, 1);
-	maze[6][13].set(1, 0, 0, 0);
-	maze[7][13].set(0, 0, 1, 0);
-	maze[8][13].set(1, 1, 0, 0);
-	maze[9][13].set(1, 0, 0, 1);
-	maze[10][13].set(1, 0, 0, 0);
-	maze[11][13].set(0, 0, 1, 1);
-	maze[12][13].set(1, 1, 0, 0);
-	maze[13][13].set(0, 0, 1, 1);
-	maze[14][13].set(0, 1, 0, 1);
-	maze[15][13].set(0, 0, 1, 1);
-
-	maze[0][14].set(0, 1, 1, 0);
-	maze[1][14].set(0, 1, 1, 0);
-	maze[2][14].set(1, 1, 0, 0);
-	maze[3][14].set(1, 0, 1, 0);
-	maze[4][14].set(0, 1, 0, 1);
-	maze[5][14].set(1, 0, 0, 0);
-	maze[6][14].set(0, 0, 1, 0);
-	maze[7][14].set(0, 1, 0, 0);
-	maze[8][14].set(0, 0, 1, 0);
-	maze[9][14].set(1, 1, 0, 0);
-	maze[10][14].set(0, 0, 0, 1);
-	maze[11][14].set(1, 0, 0, 0);
-	maze[12][14].set(0, 0, 1, 1);
-	maze[13][14].set(1, 1, 0, 0);
-	maze[14][14].set(1, 0, 0, 0);
-	maze[15][14].set(1, 0, 1, 0);
-
-	maze[0][15].set(0, 1, 1, 1);
-	maze[1][15].set(0, 1, 0, 1);
-	maze[2][15].set(0, 0, 1, 1);
-	maze[3][15].set(0, 1, 0, 1);
-	maze[4][15].set(1, 0, 0, 1);
-	maze[5][15].set(0, 0, 1, 1);
-	maze[6][15].set(0, 1, 0, 1);
-	maze[7][15].set(0, 0, 1, 1);
-	maze[8][15].set(0, 1, 0, 1);
-	maze[9][15].set(0, 0, 1, 1);
-	maze[10][15].set(1, 1, 0, 1);
-	maze[11][15].set(0, 0, 0, 1);
-	maze[12][15].set(1, 0, 0, 1);
-	maze[13][15].set(0, 0, 1, 1);
-	maze[14][15].set(0, 1, 1, 1);
-	maze[15][15].set(0, 1, 1, 1);
-
-	for (int i = 0; i < 16; i++) {
-		for (int j = 0; j < 16; j++) {
-			maze[i][j].setCord(i, j);
-		}
-	}
-}
-*/
+}*/
