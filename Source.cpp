@@ -2,7 +2,7 @@
 * Program Name: Virtual Micro Mouse
 * Created By: Timothy Mulvey
 * Purpose: Simulate a MicroMouse maze and mouse to test algorithms
-* Version: 0.11
+* Version: 0.12
 * Date: 12/28/2017
 *******************************************/
 
@@ -33,7 +33,7 @@ public:
 				mazeEdge = true;
 			}
 			else {
-				dist = rand();
+				dist = (rand() % 15) + 1;
 				mazeEdge = false;
 				if (dir == 'n')
 				destY = y - 1;
@@ -48,7 +48,7 @@ public:
 				mazeEdge = true;
 			}
 			else {
-				dist = rand();
+				dist = (rand() % 15) + 1;
 				mazeEdge = false;
 				if (dir == 'w')
 					destX = x - 1;
@@ -81,7 +81,22 @@ public:
 	void randSetup(int xVal, int yVal) {
 		x = xVal; y = yVal;
 		north.randSetup(x, y, 'n');
-		dist = rand();
+		east.randSetup(x, y, 'e');
+		south.randSetup(x, y, 's');
+		west.randSetup(x, y, 'w');
+		top = true; bottom = true;
+		left = true; right = true;
+		if ((x == 7 || x == 8) && (y == 7 || y == 8)) {
+			dist = 0;
+			if (x == 7) right = false;
+			if (x == 8) left = false;
+			if (y == 7) bottom = false;
+			if (y == 8) top = false;
+		}
+		else {
+			dist = (rand() % 15) + 1;
+		}
+		
 	}
 
 	//Sets walls on cell
@@ -121,80 +136,6 @@ public:
 			dist = 7 - x + y - 8;
 		else
 			dist = x - 8 + y - 8;
-	}
-};
-
-/*******************************************
-* Class Name: Maze
-* Purpose: Represent a Micro Mouse maze.
-*******************************************/
-class Maze {
-	Cell maze[16][16];
-public:
-	Maze();
-	Maze(bool);
-	void draw() {
-		//Draw top edge
-		cout << "+";
-		for (int x = 0; x < 16; x++) {
-			if (maze[x][0].top == true) cout << "---+"; else cout << "   +";
-		}
-		cout << "\n";
-
-		for (int y = 0; y < 16; y++) {
-			//draw left edge (center)
-			if (maze[0][y].left == true) cout << "|"; else cout << " ";
-			//loop to draw horizontal lines
-			for (int x = 0; x < 16; x++) {
-				//check for mouse and draw it
-				if (maze[x][y].mouse == true) cout << " m ";
-				//check for empty cell and draw it
-				else if (maze[x][y].explored == true) cout << "   ";
-				//show distance to goal
-				else if (maze[x][y].dist > 0) cout << " " << hex << maze[x][y].dist << " ";
-				//default to empty cell
-				else cout << "   ";
-				//draw right edge
-				if (x < 15) {
-					if (maze[x][y].right == true || maze[x + 1][y].left == true) cout << "|"; else cout << " ";
-				}
-				else {
-					if (maze[x][y].right == true) cout << "|"; else cout << " ";
-				}
-			}
-			cout << "\n";
-			cout << "+";
-			//draw bottom edge of row
-			for (int x = 0; x < 16; x++) {
-				if (y < 15) {
-					if (maze[x][y].bottom == true || maze[x][y + 1].top == true) cout << "---+"; else cout << "   +";
-				}
-				else {
-					if (maze[x][y].bottom == true) cout << "---+"; else cout << "   +";
-				}
-			}
-			cout << "\n";
-		}
-
-	}
-	Cell getCell(int x, int y) {
-		return maze[x][y];
-	}
-	void setCell(int x, int y, Cell c) {
-		maze[x][y].set(c);
-	}
-	void moveMouse(int x1, int y1, int x2, int y2) {
-		maze[x1][y1].mSet(false);
-		maze[x2][y2].mSet(true);
-	}
-	void explore(int x, int y) {
-		maze[x][y].explored = true;
-	}
-	bool explored(int x, int y) {
-		return maze[x][y].explored;
-	}
-	int getDist(int x, int y) {
-		return maze[x][y].dist;
 	}
 };
 
@@ -316,6 +257,212 @@ public:
 };
 
 /*******************************************
+* Class Name: Maze
+* Purpose: Represent a Micro Mouse maze.
+*******************************************/
+class Maze {
+	Cell maze[16][16];
+
+	void removeWall() {
+		//stuff
+	}
+public:
+	/*******************************************
+	* Fuction Name: randomMaze()
+	* Parameters: None
+	* Return Value: None
+	* Purpose: Generate a randomly generated maze. Version 0.75
+	*******************************************/
+	void randomMaze() {
+		bool showOutput = true;
+		//Seed rand() for random numbers
+		srand((unsigned)time(0));
+		//turn on all walls
+		for (int x = 0; x < 16; x++) {
+			for (int y = 0; y < 16; y++) {
+				maze[x][y].randSetup(x, y);
+			}
+		}
+		
+		if (showOutput) {
+			draw();
+			system("PAUSE");
+			//system("cls");
+		}
+		
+		//create x and y to track location in maze
+		int x = 0; int y = 0;
+		//Create fringe
+		Fringe fringe = false;
+		//loop until center of the maze is reached
+		while (!((x == 7 || x == 8) && (y == 7 || y == 8))) {
+			maze[x][y].explored = true;
+			Fringe tempFringe = false;
+			if (x > 0 && !maze[x - 1][y].explored) {
+				Move move;
+				move.set('w', x, y, maze[x - 1][y].dist, 0, x - 1, y);
+				tempFringe.add(move);
+			}
+			if (x < 15 && !maze[x + 1][y].explored) {
+				Move move;
+				move.set('e', x, y, maze[x + 1][y].dist, 0, x + 1, y);
+				tempFringe.add(move);
+			}
+			if (y > 0 && !maze[x][y - 1].explored) {
+				Move move;
+				move.set('n', x, y, maze[x][y - 1].dist, 0, x, y - 1);
+				tempFringe.add(move);
+			}
+			if (y < 15 && !maze[x][y + 1].explored) {
+				Move move;
+				move.set('s', x, y, maze[x][y + 1].dist, 0, x, y + 1);
+				tempFringe.add(move);
+			}
+
+			int rando = rand() % 10;
+			if (rando == 9) {
+				fringe.add(tempFringe.getAll());
+			}
+			else if (rando == 8) {
+				for (int i = 0; i < 3; i++) {
+					if (!tempFringe.empty()) {
+						fringe.add(tempFringe.getBig());
+					}
+				}
+			}
+			else if (rando == 7) {
+				for (int i = 0; i < 2; i++) {
+					if (!tempFringe.empty()) {
+						fringe.add(tempFringe.getBig());
+					}
+				}
+			}
+			else if (rando > 0) {
+				if (!tempFringe.empty()) {
+					fringe.add(tempFringe.getBig());
+				}
+			}
+			else {
+				if (fringe.empty()) {
+					if (!tempFringe.empty()) {
+						fringe.add(tempFringe.getBig());
+					}
+				}
+			}
+			while (!tempFringe.empty()) {
+				tempFringe.get();
+			}
+			Move move = fringe.getBig();
+			if (move.dir == 'n') {
+				maze[move.sourceX][move.sourceY].top = false;
+				maze[move.destX][move.destY].bottom = false;
+			}
+			else if (move.dir == 's') {
+				maze[move.sourceX][move.sourceY].bottom = false;
+				maze[move.destX][move.destY].top = false;
+			}
+			else if (move.dir == 'e') {
+				maze[move.sourceX][move.sourceY].right = false;
+				maze[move.destX][move.destY].left = false;
+			}
+			else if (move.dir == 'w') {
+				maze[move.sourceX][move.sourceY].left = false;
+				maze[move.destX][move.destY].right = false;
+			}
+
+			x = move.destX; y = move.destY;
+		}
+	}
+
+	/*******************************************
+	* Fuction Name: Maze()
+	* Parameters: Bool
+	* Return Value: None
+	* Purpose: Generate an empty maze. Used for mouse memory.
+	*******************************************/
+	void blankMaze() {
+		maze[0][0].mSet(true);
+		for (int i = 0; i < 16; i++) {
+			for (int j = 0; j < 16; j++) {
+				maze[i][j].setCord(i, j, true);
+			}
+		}
+	}
+
+	//draw Maze
+	void draw() {
+		//Draw top edge
+		cout << "+";
+		for (int x = 0; x < 16; x++) {
+			if (maze[x][0].top == true) cout << "---+"; else cout << "   +";
+		}
+		cout << "\n";
+
+		for (int y = 0; y < 16; y++) {
+			//draw left edge (center)
+			if (maze[0][y].left == true) cout << "|"; else cout << " ";
+			//loop to draw horizontal lines
+			for (int x = 0; x < 16; x++) {
+				//check for mouse and draw it
+				if (maze[x][y].mouse == true) cout << " m ";
+				//check for empty cell and draw it
+				else if (maze[x][y].explored == true) cout << "   ";
+				//show distance to goal
+				else if (maze[x][y].dist > 0) cout << " " << hex << maze[x][y].dist << " ";
+				//default to empty cell
+				else cout << "   ";
+				//draw right edge
+				if (x < 15) {
+					if (maze[x][y].right == true || maze[x + 1][y].left == true) cout << "|"; else cout << " ";
+				}
+				else {
+					if (maze[x][y].right == true) cout << "|"; else cout << " ";
+				}
+			}
+			cout << "\n";
+			cout << "+";
+			//draw bottom edge of row
+			for (int x = 0; x < 16; x++) {
+				if (y < 15) {
+					if (maze[x][y].bottom == true || maze[x][y + 1].top == true) cout << "---+"; else cout << "   +";
+				}
+				else {
+					if (maze[x][y].bottom == true) cout << "---+"; else cout << "   +";
+				}
+			}
+			cout << "\n";
+		}
+
+	}
+
+	//return cell from position (x,y)
+	Cell getCell(int x, int y) {
+		return maze[x][y];
+	}
+
+	void setCell(int x, int y, Cell c) {
+		maze[x][y].set(c);
+	}
+
+	void moveMouse(int x1, int y1, int x2, int y2) {
+		maze[x1][y1].mSet(false);
+		maze[x2][y2].mSet(true);
+	}
+
+	void explore(int x, int y) {
+		maze[x][y].explored = true;
+	}
+
+	bool explored(int x, int y) {
+		return maze[x][y].explored;
+	}
+
+	int getDist(int x, int y) {
+		return maze[x][y].dist;
+	}
+};
+
+/*******************************************
 * Class Name: Mouse
 * Purpose: Representa the mouse in the maze.
 *******************************************/
@@ -410,20 +557,9 @@ class Mouse {
 
 public:
 
-	Mouse() {
-		maze = Maze(true);
-		x = 0;
-		y = 0;
-		dir = 'e';
-		steps = 0;
-	}
-
-	Mouse(Maze m) {
-		maze = m;
-		x = 0;
-		y = 0;
-		dir = 'e';
-		steps = 0;
+	//Constructor
+	Mouse() : x(0), y(0), dir('e'), steps(0) {
+		maze.blankMaze();
 	}
 
 	void go(Maze input) {
@@ -620,6 +756,7 @@ public:
 *******************************************/
 int main() {
 	Maze maze;
+	maze.randomMaze();
 	Mouse mouse;
 
 	mouse.go(maze);
@@ -683,236 +820,3 @@ void Mouse::moveSimple() {
 		}
 	}
 }
-
-/*******************************************
-* Fuction Name: Maze()
-* Parameters: Bool
-* Return Value: None
-* Purpose: Constructor that makes an empty maze. Used for mouse memory.
-*******************************************/
-Maze::Maze(bool empty) {
-	maze[0][0].mSet(true);
-	for (int i = 0; i < 16; i++) {
-		for (int j = 0; j < 16; j++) {
-			maze[i][j].setCord(i, j, true);
-		}
-	}
-}
-
-/*******************************************
-* Fuction Name: Maze()
-* Parameters: None
-* Return Value: None
-* Purpose: Constructor that makes a randomly generated maze. Version 1.0
-*******************************************/
-Maze::Maze() {
-	//Seed rand() for random numbers
-	srand((unsigned)time(0));
-	//turn on all walls
-	for (int x = 0; x < 16; x++) {
-		for (int y = 0; y < 16; y++) {
-			maze[x][y].set(true, true, true, true);
-			maze[x][y].dist = (rand() % 15) + 1;
-		}
-	}
-	//Take down center walls and set distance values to zero
-	maze[7][7].dist = 0;
-	maze[7][7].set(true, true, false, false);
-	maze[8][7].dist = 0;
-	maze[8][7].set(true, false, true, false);
-	maze[7][8].dist = 0;
-	maze[7][8].set(false, true, false, true);
-	maze[8][8].dist = 0;
-	maze[8][8].set(false, false, true, true);
-	//create x and y to track location in maze
-	int x = 0; int y = 0;
-	//Create fringe
-	Fringe fringe = false;
-	//loop until center of the maze is reached
-	while (!((x == 7 || x == 8) && (y == 7 || y == 8))) {
-		maze[x][y].explored = true;
-		Fringe tempFringe = false;
-		if (x > 0 && !maze[x - 1][y].explored) {
-			Move move;
-			move.set('w', x, y, maze[x - 1][y].dist, 0, x - 1, y);
-			tempFringe.add(move);
-		}
-		if (x < 15 && !maze[x + 1][y].explored) {
-			Move move;
-			move.set('e', x, y, maze[x + 1][y].dist, 0, x + 1, y);
-			tempFringe.add(move);
-		}
-		if (y > 0 && !maze[x][y - 1].explored) {
-			Move move;
-			move.set('n', x, y, maze[x][y - 1].dist, 0, x, y - 1);
-			tempFringe.add(move);
-		}
-		if (y < 15 && !maze[x][y + 1].explored) {
-			Move move;
-			move.set('s', x, y, maze[x][y + 1].dist, 0, x, y + 1);
-			tempFringe.add(move);
-		}
-
-		int rando = rand() % 10;
-		if (rando == 9) {
-			fringe.add(tempFringe.getAll());
-		}
-		else if (rando == 8) {
-			for (int i = 0; i < 3; i++) {
-				if (!tempFringe.empty()) {
-					fringe.add(tempFringe.getBig());
-				}
-			}
-		}
-		else if (rando == 7) {
-			for (int i = 0; i < 2; i++) {
-				if (!tempFringe.empty()) {
-					fringe.add(tempFringe.getBig());
-				}
-			}
-		}
-		else if (rando > 0) {
-			if (!tempFringe.empty()) {
-				fringe.add(tempFringe.getBig());
-			}
-		}
-		else {
-			if (fringe.empty()) {
-				if (!tempFringe.empty()) {
-					fringe.add(tempFringe.getBig());
-				}
-			}
-		}
-		while (!tempFringe.empty()) {
-			tempFringe.get();
-		}
-		Move move = fringe.getBig();
-		if (move.dir == 'n') {
-			maze[move.sourceX][move.sourceY].top = false;
-			maze[move.destX][move.destY].bottom = false;
-		}
-		else if (move.dir == 's') {
-			maze[move.sourceX][move.sourceY].bottom = false;
-			maze[move.destX][move.destY].top = false;
-		}
-		else if (move.dir == 'e') {
-			maze[move.sourceX][move.sourceY].right = false;
-			maze[move.destX][move.destY].left = false;
-		}
-		else if (move.dir == 'w') {
-			maze[move.sourceX][move.sourceY].left = false;
-			maze[move.destX][move.destY].right = false;
-		}
-
-		x = move.destX; y = move.destY;
-	}
-}
-
-/*******************************************
-* Fuction Name: Maze()
-* Parameters: None
-* Return Value: None
-* Purpose: Constructor that makes a randomly generated maze. Version 0.5
-*******************************************/
-/*Maze::Maze() {
-	//Seed rand() for random numbers
-	srand((unsigned)time(0));
-	//turn on all walls
-	for (int x = 0; x < 16; x++) {
-		for (int y = 0; y < 16; y++) {
-			maze[x][y].set(true, true, true, true);
-			maze[x][y].dist = (rand() % 15) + 1;
-		}
-	}
-	//Take down center walls and set distance values to zero
-	maze[7][7].dist = 0;
-	maze[7][7].set(true, true, false, false);
-	maze[8][7].dist = 0;
-	maze[8][7].set(true, false, true, false);
-	maze[7][8].dist = 0;
-	maze[7][8].set(false, true, false, true);
-	maze[8][8].dist = 0;
-	maze[8][8].set(false, false, true, true);
-	//create x and y to track location in maze
-	int x = 0; int y = 0;
-	//Create fringe
-	Fringe fringe = false;
-	//loop until center of the maze is reached
-	while (!((x == 7 || x == 8) && (y == 7 || y == 8))) {
-		maze[x][y].explored = true;
-		Fringe tempFringe = false;
-		if (x > 0 && !maze[x-1][y].explored) {
-			Move move;
-			move.set('w', x, y, maze[x-1][y].dist, 0, x - 1, y);
-			tempFringe.add(move);
-		}
-		if (x < 15 && !maze[x + 1][y].explored) {
-			Move move;
-			move.set('e', x, y, maze[x+1][y].dist, 0, x + 1, y);
-			tempFringe.add(move);
-		}
-		if (y > 0 && !maze[x][y-1].explored) {
-			Move move;
-			move.set('n', x, y, maze[x][y-1].dist, 0, x, y - 1);
-			tempFringe.add(move);
-		}
-		if (y < 15 && !maze[x][y+1].explored) {
-			Move move;
-			move.set('s', x, y, maze[x][y+1].dist, 0, x, y + 1);
-			tempFringe.add(move);
-		}
-		
-		int rando = rand() % 10;
-		if (rando == 9) {
-			fringe.add(tempFringe.getAll());
-		}
-		else if (rando == 8) {
-			for (int i = 0; i < 3; i++) {
-				if (!tempFringe.empty()) {
-					fringe.add(tempFringe.getBig());
-				}
-			}
-		}
-		else if (rando == 7) {
-			for (int i = 0; i < 2; i++) {
-				if (!tempFringe.empty()) {
-					fringe.add(tempFringe.getBig());
-				}
-			}
-		}
-		else if (rando > 0) {
-			if (!tempFringe.empty()) {
-				fringe.add(tempFringe.getBig());
-			}
-		}
-		else {
-			if (fringe.empty()) {
-				if (!tempFringe.empty()) {
-					fringe.add(tempFringe.getBig());
-				}
-			}
-		}
-		while (!tempFringe.empty()) {
-			tempFringe.get();
-		}
-		Move move = fringe.getBig();
-		if (move.dir == 'n') {
-			maze[move.sourceX][move.sourceY].top = false;
-			maze[move.destX][move.destY].bottom = false;
-		}
-		else if (move.dir == 's') {
-			maze[move.sourceX][move.sourceY].bottom = false;
-			maze[move.destX][move.destY].top = false;
-		}
-		else if (move.dir == 'e') {
-			maze[move.sourceX][move.sourceY].right = false;
-			maze[move.destX][move.destY].left = false;
-		}
-		else if (move.dir == 'w') {
-			maze[move.sourceX][move.sourceY].left = false;
-			maze[move.destX][move.destY].right = false;
-		}
-		
-		x = move.destX; y = move.destY;
-	}
-}*/
