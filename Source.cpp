@@ -2,7 +2,7 @@
 * Program Name: Virtual Micro Mouse
 * Created By: Timothy Mulvey
 * Purpose: Simulate a MicroMouse maze and mouse to test algorithms
-* Version: 0.12
+* Version: 0.13
 * Date: 12/28/2017
 *******************************************/
 
@@ -25,6 +25,12 @@ public:
 	void randSetup(int x, int y, char dir) {
 		sourceX = x; sourceY = y;
 		wall = true;
+		if ((x == 7 || x == 8) && (y == 7 || y == 8)) {
+			if (y == 7 && dir == 's') wall = false;
+			if (y == 8 && dir == 'n') wall = false;
+			if (x == 7 && dir == 'e') wall = false;
+			if (x == 8 && dir == 'w') wall = false;
+		}
 		if (dir == 'n' || dir == 's') {
 			destX = x;
 			if ((y == 0 && dir == 'n') || (y == 15 && dir == 's')) {
@@ -79,6 +85,8 @@ public:
 	Cell() : top(false), left(false), right(false), bottom(false), mouse(false), explored(false) {};
 
 	void randSetup(int xVal, int yVal) {
+		explored = false;
+		mouse = false;
 		x = xVal; y = yVal;
 		north.randSetup(x, y, 'n');
 		east.randSetup(x, y, 'e');
@@ -153,15 +161,13 @@ public:
 
 	void set(char d, int x1, int y1, int g, int s, int x2, int y2) {
 		dir = d;
-		sourceX = x1;
-		sourceY = y1;
+		sourceX = x1; sourceY = y1;
 		toGoal = g;
 		fromStart = s;
-		destX = x2;
-		destY = y2;
+		destX = x2; destY = y2;
 	}
 	int cost() {
-		return toGoal + fromStart;
+		return toGoal;// + fromStart;
 	}
 
 	void draw() {
@@ -269,14 +275,12 @@ class Maze {
 public:
 	/*******************************************
 	* Fuction Name: randomMaze()
-	* Parameters: None
+	* Parameters: bool, turns output on or off
 	* Return Value: None
-	* Purpose: Generate a randomly generated maze. Version 0.75
+	* Purpose: Generate a randomly generated maze. Version 0.76
 	*******************************************/
-	void randomMaze() {
-		bool showOutput = true;
-		//Seed rand() for random numbers
-		srand((unsigned)time(0));
+	void randomMaze(bool b) {
+		bool showOutput = b;
 		//turn on all walls
 		for (int x = 0; x < 16; x++) {
 			for (int y = 0; y < 16; y++) {
@@ -559,33 +563,31 @@ public:
 
 	//Constructor
 	Mouse() : x(0), y(0), dir('e'), steps(0) {
-		maze.blankMaze();
 	}
 
 	void go(Maze input) {
+		maze.blankMaze();
 		char cont;
-		do {
+		input.draw();
+		cout << "Start? (Y / N) : ";
+		cin >> cont;
+		while (cont == 'Y' || cont == 'y') {
+			system("cls");
+			int tempX = x; int tempY = y;
+			sense(input.getCell(x, y));
+			move();
+			input.moveMouse(tempX, tempY, x, y);
 			input.draw();
-			cout << "Start? (Y / N) : ";
-			cin >> cont;
-			while (cont == 'Y' || cont == 'y') {
-				system("cls");
-				int tempX = x; int tempY = y;
-				sense(input.getCell(x, y));
-				move();
-				input.moveMouse(tempX, tempY, x, y);
-				input.draw();
-				sense(input.getCell(x, y));
-				showMaze();
-				cout << "Move again? (Y/N): ";
-				cin >> cont;
+			sense(input.getCell(x, y));
+			showMaze();
+			//end program when center of the maze is reached
+			if ((x == 7 || x == 8) && (y == 7 || y == 8)) {
+				cout << "Goal reached!!\n";
+				system("PAUSE");
+				return;
 			}
-			system("cls");
-			input.draw();
-			cout << "Would you like to play again? (Y/N): ";
-			cin >> cont;
-			system("cls");
-		} while (cont == 'Y' || cont == 'y');
+			system("PAUSE");
+		}
 	}
 
 	void move() {
@@ -611,6 +613,7 @@ public:
 		while (!valid(move1.destX, move1.destY)) {
 			cout << "Discarding move:\n";
 			move1.draw();
+			system("PAUSE");
 			move1 = fringe.get();
 		}
 		if (move1.sourceX == x && move1.sourceY == y) {
@@ -756,10 +759,20 @@ public:
 *******************************************/
 int main() {
 	Maze maze;
-	maze.randomMaze();
 	Mouse mouse;
-
-	mouse.go(maze);
+	//Seed rand() for random numbers
+	srand((unsigned)time(0));
+	char cont;
+	bool showOutput = false;
+	do {
+		maze.randomMaze(showOutput);
+		mouse.go(maze);
+		system("cls");
+		cout << "Would you like to play again? (Y/N): ";
+		cin >> cont;
+		system("cls");
+		showOutput = true;
+	} while (cont == 'Y' || cont == 'y');
 
 	return 0;
 }
