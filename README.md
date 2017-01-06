@@ -3,13 +3,11 @@ Simulate a Micro Mouse maze and mouse to test algorithms
 
 http://choosealicense.com/no-license/
 
-Version: 0.2.0
+Version: 0.2.1
 Date: 01/06/2017
 
 Major issues:
-	Random crash with deque error. (fixed)
-	Random maze generation sometimes fails to create a path to the center. (fixed)
-	Random maze generation does not use all cells. (fixed)
+	No known issues
 	
 Future features:
 	Program mouse to return to start after finding the center of the maze.

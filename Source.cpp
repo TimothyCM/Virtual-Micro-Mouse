@@ -2,7 +2,7 @@
 * Program Name: Virtual Micro Mouse
 * Created By: Timothy Mulvey
 * Purpose: Simulate a MicroMouse maze and mouse to test algorithms
-* Version: 0.2.0
+* Version: 0.2.1
 * Date: 01/06/2017
 *******************************************/
 
@@ -173,7 +173,7 @@ public:
 	void draw() {
 		cout << dec << "|| Source: (" << sourceX << ", " << sourceY << ") Dir: " << dir
 			<< " Dest: (" << destX << ", " << destY
-			<< ") Cost: " << toGoal << " + " << fromStart << " = " << cost() << " ||\n";
+			<< ") Cost: " <</* toGoal << " + " << fromStart << " = " <<*/ cost() << " ||\n";
 	}
 };
 
@@ -278,16 +278,12 @@ public:
 *******************************************/
 class Maze {
 	Cell maze[16][16];
-
-	void removeWall() {
-		//stuff
-	}
 public:
 	/*******************************************
 	* Fuction Name: randomMaze()
 	* Parameters: bool, turns output on or off
 	* Return Value: None
-	* Purpose: Generate a randomly generated maze. Version 0.76
+	* Purpose: Generate a random maze. Version 1.0
 	*******************************************/
 	void randomMaze(bool b) {
 		bool showOutput = b;
@@ -298,10 +294,10 @@ public:
 			}
 		}
 		
+		//stops to show maze setup if output is on
 		if (showOutput) {
 			draw();
 			system("PAUSE");
-			//system("cls");
 		}
 		
 		//create x and y to track location in maze
@@ -309,42 +305,44 @@ public:
 		//Create fringe and set if output is off or on
 		Fringe fringe = showOutput;
 		
-		//loop until center of the maze is reached
+		//Loop until center of the maze is reached
 		while (!((x == 7 || x == 8) && (y == 7 || y == 8))) {
+			//Mark maze cell as explored
 			maze[x][y].explored = true;
-			Fringe tempFringe = showOutput;
+
+			//Add any moves to adjacent cells, that have not been explored, to fringe 
+			Move move;
 			if (x > 0 && !maze[x - 1][y].explored) {
-				Move move;
 				move.set('w', x, y, maze[x - 1][y].dist, 0, x - 1, y);
-				tempFringe.add(move);
+				fringe.add(move);
 			}
 			if (x < 15 && !maze[x + 1][y].explored) {
-				Move move;
 				move.set('e', x, y, maze[x + 1][y].dist, 0, x + 1, y);
-				tempFringe.add(move);
+				fringe.add(move);
 			}
 			if (y > 0 && !maze[x][y - 1].explored) {
-				Move move;
 				move.set('n', x, y, maze[x][y - 1].dist, 0, x, y - 1);
-				tempFringe.add(move);
+				fringe.add(move);
 			}
 			if (y < 15 && !maze[x][y + 1].explored) {
-				Move move;
 				move.set('s', x, y, maze[x][y + 1].dist, 0, x, y + 1);
-				tempFringe.add(move);
+				fringe.add(move);
 			}
 
-			fringe.add(tempFringe.getAll());
-
+			//Check if fringe is empty. Reduntant, this should never happen.
 			if (fringe.empty()) {
 				cout << "Maze.randomMaze(): ERROR: No moves available. Exiting!\n";
 				system("PAUSE");
 				return;
 			}
-			Move move = fringe.getBig();
+
+			//Pick the next move
+			move = fringe.getBig();
 			while (maze[move.destX][move.destY].explored) {
 				move = fringe.getBig();
 			}
+
+			//Take down the wall for the move
 			if (move.dir == 'n') {
 				maze[move.sourceX][move.sourceY].top = false;
 				maze[move.destX][move.destY].bottom = false;
@@ -362,7 +360,10 @@ public:
 				maze[move.destX][move.destY].right = false;
 			}
 
+			//Update location
 			x = move.destX; y = move.destY;
+
+			//Show updated maze and pause if output is on
 			if (showOutput) {
 				draw();
 				system("PAUSE");
@@ -464,16 +465,12 @@ public:
 * Purpose: Representa the mouse in the maze.
 *******************************************/
 class Mouse {
-	Maze maze;
-	Fringe fringe;
-	int steps;
-	// (x,y) coordinates of mouse
-	int x;
-	int y;
-	// Direction mouse is facing n, e, s, w
-	char dir;
-	//current location
-	Cell curCell;
+	Maze maze;			//mouse memory of maze
+	Fringe fringe;		//possible moves
+	int steps;			//counter for steps
+	int x, y;			//coordinates of mouse
+	char dir;			// Direction mouse is facing n, e, s, w
+	Cell curCell;		//current location
 
 	//private functions
 	void sense(Cell cell) {
