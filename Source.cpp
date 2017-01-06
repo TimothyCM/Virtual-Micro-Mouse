@@ -2,7 +2,8 @@
 * Program Name: Virtual Micro Mouse
 * Created By: Timothy Mulvey
 * Purpose: Simulate a MicroMouse maze and mouse to test algorithms
-* Version: 0.14
+* Version: 0.2.0
+* Date: 01/06/2017
 *******************************************/
 
 #include <cstdlib> 
@@ -305,13 +306,10 @@ public:
 		
 		//create x and y to track location in maze
 		int x = 0; int y = 0;
-		//Create fringe
+		//Create fringe and set if output is off or on
 		Fringe fringe = showOutput;
+		
 		//loop until center of the maze is reached
-		if (showOutput) {
-			cout << "Entering Loop - Maze.randomMaze()\n";
-			system("PAUSE");
-		}
 		while (!((x == 7 || x == 8) && (y == 7 || y == 8))) {
 			maze[x][y].explored = true;
 			Fringe tempFringe = showOutput;
@@ -336,49 +334,17 @@ public:
 				tempFringe.add(move);
 			}
 
-			int rando = rand() % 10;
-			if (showOutput) {
-				cout << "Maze.randomMaze(): Passed adding. rando = " << rando << "\n";
-				system("PAUSE");
-			}
-			if (rando == 9) {
-				fringe.add(tempFringe.getAll());
-			}
-			else if (rando == 8) {
-				for (int i = 0; i < 3; i++) {
-					if (!tempFringe.empty()) {
-						fringe.add(tempFringe.getBig());
-					}
-				}
-			}
-			else if (rando == 7) {
-				for (int i = 0; i < 2; i++) {
-					if (!tempFringe.empty()) {
-						fringe.add(tempFringe.getBig());
-					}
-				}
-			}
-			else if (rando > 0) {
-				if (!tempFringe.empty()) {
-					fringe.add(tempFringe.getBig());
-				}
-			}
-			else {
-				if (fringe.empty()) {
-					if (!tempFringe.empty()) {
-						fringe.add(tempFringe.getBig());
-					}
-				}
-			}
-			while (!tempFringe.empty()) {
-				tempFringe.get();
-			}
+			fringe.add(tempFringe.getAll());
+
 			if (fringe.empty()) {
 				cout << "Maze.randomMaze(): ERROR: No moves available. Exiting!\n";
 				system("PAUSE");
 				return;
 			}
 			Move move = fringe.getBig();
+			while (maze[move.destX][move.destY].explored) {
+				move = fringe.getBig();
+			}
 			if (move.dir == 'n') {
 				maze[move.sourceX][move.sourceY].top = false;
 				maze[move.destX][move.destY].bottom = false;
