@@ -2,8 +2,7 @@
 * Program Name: Virtual Micro Mouse
 * Created By: Timothy Mulvey
 * Purpose: Simulate a MicroMouse maze and mouse to test algorithms
-* Version: 0.13
-* Date: 12/28/2017
+* Version: 0.14
 *******************************************/
 
 #include <cstdlib> 
@@ -190,6 +189,11 @@ public:
 	bool empty() {
 		return moves.empty();
 	}
+	void clearAll() {
+		while (!moves.empty()) {
+			moves.pop_front();
+		}
+	}
 	deque<Move> getAll() {
 		return moves;
 	}
@@ -231,6 +235,11 @@ public:
 		return move;
 	}
 	Move getBig() {
+		if (moves.empty()) {
+			cout << "Fringe.getBig(): ERROR: No moves available! Exiting\n";
+			system("PAUSE");
+			return Move();
+		}
 		Move move = moves.front();
 		moves.pop_front();
 		if (!moves.empty()) {
@@ -297,11 +306,15 @@ public:
 		//create x and y to track location in maze
 		int x = 0; int y = 0;
 		//Create fringe
-		Fringe fringe = false;
+		Fringe fringe = showOutput;
 		//loop until center of the maze is reached
+		if (showOutput) {
+			cout << "Entering Loop - Maze.randomMaze()\n";
+			system("PAUSE");
+		}
 		while (!((x == 7 || x == 8) && (y == 7 || y == 8))) {
 			maze[x][y].explored = true;
-			Fringe tempFringe = false;
+			Fringe tempFringe = showOutput;
 			if (x > 0 && !maze[x - 1][y].explored) {
 				Move move;
 				move.set('w', x, y, maze[x - 1][y].dist, 0, x - 1, y);
@@ -324,6 +337,10 @@ public:
 			}
 
 			int rando = rand() % 10;
+			if (showOutput) {
+				cout << "Maze.randomMaze(): Passed adding. rando = " << rando << "\n";
+				system("PAUSE");
+			}
 			if (rando == 9) {
 				fringe.add(tempFringe.getAll());
 			}
@@ -356,6 +373,11 @@ public:
 			while (!tempFringe.empty()) {
 				tempFringe.get();
 			}
+			if (fringe.empty()) {
+				cout << "Maze.randomMaze(): ERROR: No moves available. Exiting!\n";
+				system("PAUSE");
+				return;
+			}
 			Move move = fringe.getBig();
 			if (move.dir == 'n') {
 				maze[move.sourceX][move.sourceY].top = false;
@@ -375,6 +397,11 @@ public:
 			}
 
 			x = move.destX; y = move.destY;
+			if (showOutput) {
+				draw();
+				system("PAUSE");
+				system("cls");
+			}
 		}
 	}
 
@@ -567,6 +594,7 @@ public:
 
 	void go(Maze input) {
 		maze.blankMaze();
+		fringe.clearAll();
 		char cont;
 		input.draw();
 		cout << "Start? (Y / N) : ";
@@ -759,19 +787,18 @@ public:
 *******************************************/
 int main() {
 	Maze maze;
-	Mouse mouse;
 	//Seed rand() for random numbers
 	srand((unsigned)time(0));
 	char cont;
 	bool showOutput = false;
 	do {
+		Mouse mouse;
 		maze.randomMaze(showOutput);
 		mouse.go(maze);
 		system("cls");
 		cout << "Would you like to play again? (Y/N): ";
 		cin >> cont;
 		system("cls");
-		showOutput = true;
 	} while (cont == 'Y' || cont == 'y');
 
 	return 0;
